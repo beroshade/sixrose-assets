@@ -1,0 +1,1 @@
+# sixrose-assets
