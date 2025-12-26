@@ -5,12 +5,12 @@ local github_branch = "main"
 local folderName = "sixrose_assets"
 local EXT = ".mp3" 
 
--- List of files your script depends on
+-- This list now matches your GitHub screenshot exactly
 local RequiredFiles = {
-    "SqueakyToy.mp3", "SoftBellSparkle.mp3", "Sonic.mp3", "Snap.mp3", 
-    "Switch.mp3", "McXP.mp3", "Mariocoin.mp3", "Hypercharge.mp3", 
-    "HoHoHo.mp3", "Powershot.mp3", "Chip.mp3", "swoosh.mp3",
-    "Kick1.mp3", "Kick2.mp3", "Kick3.mp3"
+    "CashRegister.mp3", "Chip.mp3", "HoHoHo.mp3", "Hypercharge.mp3", 
+    "Kick1.mp3", "Kick2.mp3", "Kick3.mp3", "Mariocoin.mp3", 
+    "McXP.mp3", "Powershot.mp3", "Snap.mp3", "SoftBellSparkle.mp3", 
+    "Sonic.mp3", "SqueakyToy.mp3", "Switch.mp3", "swoosh.mp3"
 }
 
 -- // AUTO-DOWNLOADER //
@@ -31,12 +31,12 @@ for _, fileName in ipairs(RequiredFiles) do
         if success and content and content ~= "404: Not Found" then
             writefile(filePath, content)
         else
-            warn("Failed to download " .. fileName .. ". Make sure it's uploaded to GitHub!")
+            warn("Failed to download " .. fileName)
         end
     end
 end
 
--- // YOUR ORIGINAL SCRIPT LOGIC //
+-- // MAIN LOGIC //
 local RunService = game:GetService("RunService")
 local handledSounds = {}
 local lastPlayedIndices = {}
@@ -50,7 +50,8 @@ local netSounds = {
     {file = "McXP", vol = 5.0},
     {file = "Mariocoin", vol = 5.0},
     {file = "Hypercharge", vol = 10.0},
-    {file = "HoHoHo", vol = 2.0}
+    {file = "HoHoHo", vol = 2.0},
+    {file = "CashRegister", vol = 3.0} -- Added this based on your screenshot
 }
 
 local function getBalancedNetSound()
@@ -122,62 +123,70 @@ local function handleSound(sound)
         local customSound = Instance.new("Sound")
         customSound.Name = "Custom_" .. name
         customSound.Looped = false
-        customSound.SoundId = getcustomasset(folderName .. "/" .. fileName)
-        customSound.Parent = sound.Parent
-        customSound.Volume = targetVol
+        
+        -- Using pcall for getcustomasset in case the file hasn't finished writing
+        local success, asset = pcall(function()
+            return getcustomasset(folderName .. "/" .. fileName)
+        end)
+        
+        if success then
+            customSound.SoundId = asset
+            customSound.Parent = sound.Parent
+            customSound.Volume = targetVol
 
-        local lastState = false
-        local debounce = false
+            local lastState = false
+            local debounce = false
 
-        local connection
-        connection = RunService.Stepped:Connect(function()
-            if not sound or not sound.Parent then
-                if customSound then customSound:Destroy() end
-                handledSounds[sound] = nil
-                connection:Disconnect()
-                return
-            end
+            local connection
+            connection = RunService.Stepped:Connect(function()
+                if not sound or not sound.Parent then
+                    if customSound then customSound:Destroy() end
+                    handledSounds[sound] = nil
+                    connection:Disconnect()
+                    return
+                end
 
-            if name == "woosh" then
-                local parent = sound.Parent
-                local heavierFound = false
-                if parent then
-                    for _, child in ipairs(parent:GetChildren()) do
-                        if string.match(child.Name, "^heavierKick") and child:IsA("Sound") and child.Playing then
-                            heavierFound = true
-                            break
+                if name == "woosh" then
+                    local parent = sound.Parent
+                    local heavierFound = false
+                    if parent then
+                        for _, child in ipairs(parent:GetChildren()) do
+                            if string.match(child.Name, "^heavierKick") and child:IsA("Sound") and child.Playing then
+                                heavierFound = true
+                                break
+                            end
                         end
                     end
+                    
+                    if heavierFound then
+                        sound.Volume = 0
+                        customSound.Volume = 0
+                        if customSound.IsPlaying then customSound:Stop() end
+                        return 
+                    else
+                        customSound.Volume = targetVol
+                    end
                 end
-                
-                if heavierFound then
-                    sound.Volume = 0
-                    customSound.Volume = 0
-                    if customSound.IsPlaying then customSound:Stop() end
-                    return 
-                else
-                    customSound.Volume = targetVol
-                end
-            end
 
-            sound.Volume = 0 
-            
-            if sound.Playing and not lastState and not debounce then
-                debounce = true
-                if name == "NetSFX" then
-                    local picked = getBalancedNetSound()
-                    customSound.SoundId = getcustomasset(folderName .. "/" .. picked.file .. EXT)
-                    customSound.Volume = picked.vol
+                sound.Volume = 0 
+                
+                if sound.Playing and not lastState and not debounce then
+                    debounce = true
+                    if name == "NetSFX" then
+                        local picked = getBalancedNetSound()
+                        customSound.SoundId = getcustomasset(folderName .. "/" .. picked.file .. EXT)
+                        customSound.Volume = picked.vol
+                    end
+                    customSound.PlaybackSpeed = sound.PlaybackSpeed
+                    customSound.TimePosition = 0
+                    customSound:Play()
+                    task.delay(0.05, function() debounce = false end)
+                elseif not sound.Playing and lastState then
+                    customSound:Stop()
                 end
-                customSound.PlaybackSpeed = sound.PlaybackSpeed
-                customSound.TimePosition = 0
-                customSound:Play()
-                task.delay(0.05, function() debounce = false end)
-            elseif not sound.Playing and lastState then
-                customSound:Stop()
-            end
-            lastState = sound.Playing
-        end)
+                lastState = sound.Playing
+            end)
+        end
     end
 end
 
