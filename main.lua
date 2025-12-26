@@ -89,24 +89,55 @@ end)
 local handledSounds = {}
 local lastPlayedIndices = {}
 local netSounds = {{file="SqueakyToy",vol=5.0},{file="SoftBellSparkle",vol=5.5},{file="Sonic",vol=5.0},{file="Snap",vol=10.0},{file="Switch",vol=5.0},{file="McXP",vol=5.0},{file="Mariocoin",vol=5.0},{file="Hypercharge",vol=10.0},{file="HoHoHo",vol=2.0},{file="CashRegister",vol=3.0}}
+local soundDebounce = false -- Add this line above the function
+
 local function handleSound(sound)
-    if not customSoundsEnabled or not sound:IsA("Sound") or handledSounds[sound] then return end
+    -- Check if custom sounds are on, if it's a sound, and check the DEBOUNCE
+    if not customSoundsEnabled or not sound:IsA("Sound") or handledSounds[sound] or soundDebounce then 
+        return 
+    end
+    
     handledSounds[sound] = true
     local name, fileName, targetVol = sound.Name, nil, 2.0
-    if name == "NetSFX" then local p = netSounds[math.random(1,#netSounds)] fileName, targetVol = p.file..".mp3", p.vol
-    elseif name == "HeavyKick" then fileName, targetVol = "Powershot.mp3", 5.0
-    elseif string.match(name, "^heavierKick") then fileName, targetVol = "Chip.mp3", 3.0
-    elseif name == "woosh" then fileName, targetVol = "swoosh.mp3", 3.0
-    elseif string.match(name, "^Kick") then local n = tonumber(string.match(name, "%d+")) or 1 fileName = "Kick"..(((n-1)%3)+1)..".mp3" end
+    
+    -- Identify the sound
+    if name == "NetSFX" then 
+        local p = netSounds[math.random(1,#netSounds)] 
+        fileName, targetVol = p.file..".mp3", p.vol
+    elseif name == "HeavyKick" then 
+        fileName, targetVol = "Powershot.mp3", 5.0
+    elseif string.match(name, "^heavierKick") then 
+        fileName, targetVol = "Chip.mp3", 3.0
+    elseif name == "woosh" then 
+        fileName, targetVol = "swoosh.mp3", 3.0
+    elseif string.match(name, "^Kick") then 
+        local n = tonumber(string.match(name, "%d+")) or 1 
+        fileName = "Kick"..(((n-1)%3)+1)..".mp3" 
+    end
+
     if fileName then
+        -- ACTIVATE DEBOUNCE
+        soundDebounce = true 
+        task.delay(0.1, function() soundDebounce = false end) -- Cooldown for 0.1 seconds
+
         sound.Volume = 0
         local custom = Instance.new("Sound", sound.Parent)
         pcall(function() custom.SoundId = getcustomasset(folderName.."/"..fileName) end)
         custom.Volume = targetVol
+        
         local c; c = game:GetService("RunService").Stepped:Connect(function()
-            if not sound or not sound.Parent or not customSoundsEnabled then custom:Destroy() handledSounds[sound] = nil c:Disconnect() return end
+            if not sound or not sound.Parent or not customSoundsEnabled then 
+                custom:Destroy() 
+                handledSounds[sound] = nil 
+                c:Disconnect() 
+                return 
+            end
             sound.Volume = 0
-            if sound.Playing and not custom.IsPlaying then custom:Play() elseif not sound.Playing and custom.IsPlaying then custom:Stop() end
+            if sound.Playing and not custom.IsPlaying then 
+                custom:Play() 
+            elseif not sound.Playing and custom.IsPlaying then 
+                custom:Stop() 
+            end
         end)
     end
 end
