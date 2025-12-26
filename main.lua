@@ -1,5 +1,22 @@
--- HakaiseHub Script Executor
--- FULL ORIGINAL RESTORED WITH UI FIXES
+-- // HakaiseHub | FULL RESTORED VERSION //
+
+--------------------------------------------------
+-- CLEANUP GUARD (PREVENTS DOUBLE UI)
+--------------------------------------------------
+if _G.HakaiseHubUI then
+    _G.HakaiseHubUI:Destroy()
+    _G.HakaiseHubUI = nil
+end
+
+-- // ASSET DOWNLOADER //
+local folderName = "sixrose_assets"
+if not isfolder(folderName) then makefolder(folderName) end
+local RequiredFiles = {"CashRegister.mp3", "Chip.mp3", "HoHoHo.mp3", "Hypercharge.mp3", "Kick1.mp3", "Kick2.mp3", "Kick3.mp3", "Mariocoin.mp3", "McXP.mp3", "Powershot.mp3", "Snap.mp3", "SoftBellSparkle.mp3", "Sonic.mp3", "SqueakyToy.mp3", "Switch.mp3", "swoosh.mp3"}
+for _, fileName in ipairs(RequiredFiles) do
+    if not isfile(folderName .. "/" .. fileName) then
+        pcall(function() writefile(folderName .. "/" .. fileName, game:HttpGet("https://raw.githubusercontent.com/beroshade/sixrose-assets/main/" .. fileName)) end)
+    end
+end
 
 --------------------------------------------------
 -- UI LIBRARY
@@ -36,6 +53,8 @@ local window = ui.newWindow({
     size = Vector2.new(550, 376),
 })
 
+_G.HakaiseHubUI = window.instance -- Required for the cleanup guard
+
 -- RIGHT SHIFT TOGGLE ADDED HERE
 game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
     if not gp and input.KeyCode == Enum.KeyCode.RightShift then
@@ -55,7 +74,7 @@ local extraSection = extraMenu:addSection({
 })
 
 ----------------------------------------
--- Custom Sounds
+-- Custom Sounds (FIXED TO PREVENT RELOAD)
 ----------------------------------------
 local customSoundsEnabled = false
 
@@ -64,13 +83,34 @@ extraSection:addToggle({
     default = false
 }, function(state)
     customSoundsEnabled = state
-    if state then
-        loadstring(game:HttpGet(
-            "https://raw.githubusercontent.com/beroshade/sixrose-assets/main/main.lua"
-        ))()
-    end
 end)
 
+-- Built-in Sound Logic (To prevent needing a separate loadstring)
+local handledSounds = {}
+local lastPlayedIndices = {}
+local netSounds = {{file="SqueakyToy",vol=5.0},{file="SoftBellSparkle",vol=5.5},{file="Sonic",vol=5.0},{file="Snap",vol=10.0},{file="Switch",vol=5.0},{file="McXP",vol=5.0},{file="Mariocoin",vol=5.0},{file="Hypercharge",vol=10.0},{file="HoHoHo",vol=2.0},{file="CashRegister",vol=3.0}}
+local function handleSound(sound)
+    if not customSoundsEnabled or not sound:IsA("Sound") or handledSounds[sound] then return end
+    handledSounds[sound] = true
+    local name, fileName, targetVol = sound.Name, nil, 2.0
+    if name == "NetSFX" then local p = netSounds[math.random(1,#netSounds)] fileName, targetVol = p.file..".mp3", p.vol
+    elseif name == "HeavyKick" then fileName, targetVol = "Powershot.mp3", 5.0
+    elseif string.match(name, "^heavierKick") then fileName, targetVol = "Chip.mp3", 3.0
+    elseif name == "woosh" then fileName, targetVol = "swoosh.mp3", 3.0
+    elseif string.match(name, "^Kick") then local n = tonumber(string.match(name, "%d+")) or 1 fileName = "Kick"..(((n-1)%3)+1)..".mp3" end
+    if fileName then
+        sound.Volume = 0
+        local custom = Instance.new("Sound", sound.Parent)
+        pcall(function() custom.SoundId = getcustomasset(folderName.."/"..fileName) end)
+        custom.Volume = targetVol
+        local c; c = game:GetService("RunService").Stepped:Connect(function()
+            if not sound or not sound.Parent or not customSoundsEnabled then custom:Destroy() handledSounds[sound] = nil c:Disconnect() return end
+            sound.Volume = 0
+            if sound.Playing and not custom.IsPlaying then custom:Play() elseif not sound.Playing and custom.IsPlaying then custom:Stop() end
+        end)
+    end
+end
+workspace.DescendantAdded:Connect(handleSound)
 
 ----------------------------------------
 -- Dribble Speed
@@ -858,7 +898,9 @@ section:addButton({
     text = 'Custom Sounds',
     style = 'large'
 }, function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/beroshade/sixrose-assets/main/main.lua"))()
+    -- FIXED: Instead of loadstring, it toggles the built-in system
+    customSoundsEnabled = not customSoundsEnabled
+    print("Custom Sounds: "..tostring(customSoundsEnabled))
 end)
 
 ----------------------------------------
@@ -1003,21 +1045,3 @@ local section = menu:addSection({
     side = 'auto',
     showMinButton = false
 })
-----------------------------------------
--- Custom Sounds
-----------------------------------------
-section:addButton({
-    text = 'Custom Sounds',
-    style = 'large'
-}, function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/beroshade/sixrose-assets/main/main.lua"))()
-end)
-
-----------------------------------------
--- Dribble Speed
-----------------------------------------
-section:addButton({
-    text = 'Dribble Speed'
-}, function() 
-    -- Handled by toggle logic above
-end)
