@@ -43,10 +43,11 @@ local Toggles = {
     InfiniteStamina = false
 }
 
--- Changeable keybinds for Insta Shot and Insta Flick
+-- Changeable keybinds
 local Keybinds = {
     InstaShot = Enum.KeyCode.G,
-    InstaFlick = Enum.KeyCode.T
+    InstaFlick = Enum.KeyCode.T,
+    DoubleTap = Enum.KeyCode.P
 }
 
 --------------------------------------------------
@@ -55,7 +56,7 @@ local Keybinds = {
 local window = ui.newWindow({
     text = 'RoffaHub',
     resize = true,
-    size = Vector2.new(550, 376),
+    size = Vector2.new(550, 420),
 })
 
 _G.RoffaHubUI = window.instance
@@ -197,23 +198,20 @@ RunService.RenderStepped:Connect(function()
 end)
 
 ----------------------------------------
--- Interpolation Buttons
+-- Interpolation Buttons (5-step increments)
 ----------------------------------------
-extraSection:addButton({ text='15 Interpolation', style='large' }, function()
-    pcall(function() setfflag("InterpolationMaxDelayMSec","15") end)
-end)
+local interpValues = {100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5}
 
-extraSection:addButton({ text='25 Interpolation', style='large' }, function()
-    pcall(function() setfflag("InterpolationMaxDelayMSec","25") end)
-end)
-
-extraSection:addButton({ text='45 Interpolation', style='large' }, function()
-    pcall(function() setfflag("InterpolationMaxDelayMSec","45") end)
-end)
-
-extraSection:addButton({ text='55 Interpolation', style='large' }, function()
-    pcall(function() setfflag("InterpolationMaxDelayMSec","55") end)
-end)
+for _, value in ipairs(interpValues) do
+    extraSection:addButton({ 
+        text = value .. ' Interpolation', 
+        style = 'large' 
+    }, function()
+        pcall(function() 
+            setfflag("InterpolationMaxDelayMSec", tostring(value)) 
+        end)
+    end)
+end
 
 --------------------------------------------------
 -- MAIN SCRIPT SECTION
@@ -225,7 +223,7 @@ local section = menu:addSection({
 })
 
 --------------------------------------------------
--- UI TOGGLES
+-- UI TOGGLES WITH VISIBLE KEYBINDS
 --------------------------------------------------
 section:addToggle({ text = 'Infinite M1 / M2 (Z)' }, function(v)
     Toggles.InfiniteM12 = v
@@ -234,66 +232,112 @@ end)
 ----------------------------------------
 -- INSTA SHOT WITH CHANGEABLE KEYBIND
 ----------------------------------------
-local instaShotKeybindBtn = nil
-
-section:addToggle({ text = 'Insta Shot (G)' }, function(v)
+local instaShotLabel = section:addToggle({ 
+    text = 'Insta Shot [' .. Keybinds.InstaShot.Name .. ']' 
+}, function(v)
     Toggles.InstaShot = v
 end)
 
-instaShotKeybindBtn = section:addButton({ 
+section:addButton({ 
     text = 'Change Insta Shot Key', 
     style = 'small' 
 }, function()
     local UIS = game:GetService("UserInputService")
-    
-    -- Create temporary notification
-    print("Press any key to set as new Insta Shot keybind...")
     
     local conn
     conn = UIS.InputBegan:Connect(function(input, gp)
         if gp then return end
         
         Keybinds.InstaShot = input.KeyCode
-        print("Insta Shot keybind changed to: " .. tostring(input.KeyCode))
+        
+        -- Update the toggle text to show new keybind
+        for _, toggle in pairs(section.toggles) do
+            if toggle.text:match("Insta Shot") then
+                toggle.text = 'Insta Shot [' .. input.KeyCode.Name .. ']'
+                toggle.label.Text = toggle.text
+                break
+            end
+        end
         
         conn:Disconnect()
     end)
 end)
 
-section:addToggle({ text = 'HBE (P / Comma / Dot)' }, function(v)
+----------------------------------------
+-- HBE (UI Toggle controls HBE, P controls visual sphere)
+----------------------------------------
+section:addToggle({ 
+    text = 'HBE (Comma/Dot = Size)' 
+}, function(v)
     Toggles.HBE = v
 end)
 
 ----------------------------------------
 -- INSTA FLICK WITH CHANGEABLE KEYBIND
 ----------------------------------------
-local instaFlickKeybindBtn = nil
-
-section:addToggle({ text = 'Insta Flick (T)' }, function(v)
+section:addToggle({ 
+    text = 'Insta Flick [' .. Keybinds.InstaFlick.Name .. ']' 
+}, function(v)
     Toggles.InstaFlick = v
 end)
 
-instaFlickKeybindBtn = section:addButton({ 
+section:addButton({ 
     text = 'Change Insta Flick Key', 
     style = 'small' 
 }, function()
     local UIS = game:GetService("UserInputService")
-    
-    print("Press any key to set as new Insta Flick keybind...")
     
     local conn
     conn = UIS.InputBegan:Connect(function(input, gp)
         if gp then return end
         
         Keybinds.InstaFlick = input.KeyCode
-        print("Insta Flick keybind changed to: " .. tostring(input.KeyCode))
+        
+        -- Update the toggle text to show new keybind
+        for _, toggle in pairs(section.toggles) do
+            if toggle.text:match("Insta Flick") then
+                toggle.text = 'Insta Flick [' .. input.KeyCode.Name .. ']'
+                toggle.label.Text = toggle.text
+                break
+            end
+        end
         
         conn:Disconnect()
     end)
 end)
 
-section:addToggle({ text = 'Double Tap (P)' }, function(v)
+----------------------------------------
+-- DOUBLE TAP WITH CHANGEABLE KEYBIND
+----------------------------------------
+section:addToggle({ 
+    text = 'Double Tap [' .. Keybinds.DoubleTap.Name .. ']' 
+}, function(v)
     Toggles.DoubleTap = v
+end)
+
+section:addButton({ 
+    text = 'Change Double Tap Key', 
+    style = 'small' 
+}, function()
+    local UIS = game:GetService("UserInputService")
+    
+    local conn
+    conn = UIS.InputBegan:Connect(function(input, gp)
+        if gp then return end
+        
+        Keybinds.DoubleTap = input.KeyCode
+        
+        -- Update the toggle text to show new keybind
+        for _, toggle in pairs(section.toggles) do
+            if toggle.text:match("Double Tap") then
+                toggle.text = 'Double Tap [' .. input.KeyCode.Name .. ']'
+                toggle.label.Text = toggle.text
+                break
+            end
+        end
+        
+        conn:Disconnect()
+    end)
 end)
 
 ----------------------------------------
@@ -432,7 +476,7 @@ do
 end
 
 --------------------------------------------------
--- HBE LOGIC (UPDATED KEYBINDS: P, COMMA, DOT)
+-- HBE LOGIC (UI Toggle = HBE On/Off, P = Visual Sphere Toggle)
 --------------------------------------------------
 do
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -440,7 +484,6 @@ do
     local UserInputService = game:GetService("UserInputService")
     local RunService = game:GetService("RunService")
 
-    local scriptActive = true
     local showSphere = true
     local manualSize = 15
     local currentSize = 15
@@ -463,7 +506,7 @@ do
             currentSize = manualSize
         end
 
-        if not ball or not scriptActive or not showSphere then
+        if not ball or not showSphere then
             if visualizer then visualizer.Visible = false end
             return
         end
@@ -489,7 +532,7 @@ do
 
         originalCreate = module.Create
         module.Create = function(config)
-            if Toggles.HBE and scriptActive then
+            if Toggles.HBE then
                 config.size = Vector3.new(currentSize, currentSize, currentSize)
             end
             return originalCreate(config)
@@ -497,21 +540,17 @@ do
     end
 
     UserInputService.InputBegan:Connect(function(input, processed)
-        if processed or not Toggles.HBE then return end
+        if processed then return end
 
         if input.KeyCode == Enum.KeyCode.P then
-            scriptActive = not scriptActive
-            print("HBE Active: " .. tostring(scriptActive))
-        elseif input.KeyCode == Enum.KeyCode.H then
             showSphere = not showSphere
-            if not showSphere and visualizer then visualizer.Visible = false end
-            print("HBE Sphere: " .. tostring(showSphere))
+            if not showSphere and visualizer then 
+                visualizer.Visible = false 
+            end
         elseif input.KeyCode == Enum.KeyCode.Comma then
             manualSize = manualSize + 1
-            print("HBE Size: " .. manualSize)
         elseif input.KeyCode == Enum.KeyCode.Period then
             manualSize = math.max(1, manualSize - 1)
-            print("HBE Size: " .. manualSize)
         end
     end)
 
@@ -571,7 +610,7 @@ do
 end
 
 --------------------------------------------------
--- DOUBLE TAP (P KEY)
+-- DOUBLE TAP (USES CHANGEABLE KEYBIND)
 --------------------------------------------------
 do
     local Players = game:GetService('Players')
@@ -585,7 +624,6 @@ do
     local TapInRemote = KeyHandlerService:GetKey('TapInHit')
 
     local player = Players.LocalPlayer
-    local inputKey = Enum.KeyCode.P
 
     local CHIP_FORCE = 37.63837890769355
     local CHIP_VECTOR = Vector3.new(33.2738037109375, 27.290828704833984, -27.609731674194336)
@@ -620,7 +658,7 @@ do
     end
 
     UserInputService.InputBegan:Connect(function(i,gp)
-        if gp or i.KeyCode ~= inputKey then return end
+        if gp or i.KeyCode ~= Keybinds.DoubleTap then return end
         if not Toggles.DoubleTap then return end
 
         local ball = getBall()
@@ -675,8 +713,3 @@ if getgenv().RoffaHubLoaded then
     return
 end
 getgenv().RoffaHubLoaded = true
-
-print("RoffaHub loaded successfully!")
-print("Insta Shot keybind: " .. tostring(Keybinds.InstaShot))
-print("Insta Flick keybind: " .. tostring(Keybinds.InstaFlick))
-print("HBE keybinds: P (toggle), Comma (bigger), Dot (smaller)")
