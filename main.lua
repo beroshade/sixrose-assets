@@ -3,9 +3,9 @@
 --------------------------------------------------
 -- CLEANUP GUARD (PREVENTS DOUBLE UI)
 --------------------------------------------------
-if _G.HakaiseHubUI then
-    _G.HakaiseHubUI:Destroy()
-    _G.HakaiseHubUI = nil
+if _G.RoffaHubUI then
+    _G.RoffaHubUI:Destroy()
+    _G.RoffaeHubUI = nil
 end
 
 -- // ASSET DOWNLOADER //
@@ -48,12 +48,12 @@ local Toggles = {
 -- MAIN WINDOW (FIXED TOGGLE)
 --------------------------------------------------
 local window = ui.newWindow({
-    text = 'HakaiseHub',
+    text = 'RoffaHub',
     resize = true,
     size = Vector2.new(550, 376),
 })
 
-_G.HakaiseHubUI = window.instance -- Required for the cleanup guard
+_G.RoffaHubUI = window.instance -- Required for the cleanup guard
 
 -- RIGHT SHIFT TOGGLE ADDED HERE
 game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
