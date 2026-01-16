@@ -1,11 +1,11 @@
--- // HakaiseHub | FULL RESTORED VERSION //
+-- // RoffaHub | REFACTORED VERSION //
 
 --------------------------------------------------
 -- CLEANUP GUARD (PREVENTS DOUBLE UI)
 --------------------------------------------------
 if _G.RoffaHubUI then
     _G.RoffaHubUI:Destroy()
-    _G.RoffaeHubUI = nil
+    _G.RoffaHubUI = nil
 end
 
 -- // ASSET DOWNLOADER //
@@ -31,21 +31,26 @@ local ui = uiLoader({
 ui.autoDisableToggles = false
 
 --------------------------------------------------
--- GLOBAL TOGGLES (PERMISSION GATES)
+-- GLOBAL TOGGLES & KEYBINDS
 --------------------------------------------------
 local Toggles = {
     InfiniteM12 = false,
     InstaShot = false,
     HBE = false,
     InstaFlick = false,
-    DoubleTap = false,       -- used in part 2
-    AutoTopBins = false,     -- used in part 2
-    DribbleSpeed = false,    -- used in part 2
-    InfiniteStamina = false -- used in part 2
+    DoubleTap = false,
+    DribbleSpeed = false,
+    InfiniteStamina = false
+}
+
+-- Changeable keybinds for Insta Shot and Insta Flick
+local Keybinds = {
+    InstaShot = Enum.KeyCode.G,
+    InstaFlick = Enum.KeyCode.T
 }
 
 --------------------------------------------------
--- MAIN WINDOW (FIXED TOGGLE)
+-- MAIN WINDOW
 --------------------------------------------------
 local window = ui.newWindow({
     text = 'RoffaHub',
@@ -53,9 +58,9 @@ local window = ui.newWindow({
     size = Vector2.new(550, 376),
 })
 
-_G.RoffaHubUI = window.instance -- Required for the cleanup guard
+_G.RoffaHubUI = window.instance
 
--- RIGHT SHIFT TOGGLE ADDED HERE
+-- RIGHT SHIFT TOGGLE
 game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
     if not gp and input.KeyCode == Enum.KeyCode.RightShift then
         window.visible = not window.visible
@@ -63,10 +68,11 @@ game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
 end)
 
 local menu = window:addMenu({ text = 'Scripts' })
-
--- EXTRA SCRIPTS MENU (FIXED)
 local extraMenu = window:addMenu({ text = 'Extra Scripts' })
 
+--------------------------------------------------
+-- EXTRA SCRIPTS SECTION
+--------------------------------------------------
 local extraSection = extraMenu:addSection({
     text = 'Extras',
     side = 'auto',
@@ -74,7 +80,7 @@ local extraSection = extraMenu:addSection({
 })
 
 ----------------------------------------
--- Custom Sounds (FIXED TO PREVENT RELOAD)
+-- Custom Sounds
 ----------------------------------------
 local customSoundsEnabled = false
 
@@ -85,23 +91,18 @@ extraSection:addToggle({
     customSoundsEnabled = state
 end)
 
--- Built-in Sound Logic (To prevent needing a separate loadstring)
+-- Sound handling logic
 local handledSounds = {}
-local lastPlayedIndices = {}
 local netSounds = {{file="SqueakyToy",vol=5.0},{file="SoftBellSparkle",vol=5.5},{file="Sonic",vol=5.0},{file="Snap",vol=10.0},{file="Switch",vol=5.0},{file="McXP",vol=5.0},{file="Mariocoin",vol=5.0},{file="Hypercharge",vol=10.0},{file="HoHoHo",vol=2.0},{file="CashRegister",vol=3.0}}
-local soundDebounce = false -- Add this line above the function
-
 local soundDebounce = false
 
 local function handleSound(sound)
-    -- 1. VALIDATION: Only proceed if toggle is ON, it's a sound, and not currently debouncing
     if not customSoundsEnabled or not sound:IsA("Sound") or soundDebounce then return end
     
     local name = sound.Name
     local fileName = nil
     local targetVol = 2.0 
     
-    -- 2. IDENTIFICATION: Map game sounds to your GitHub assets
     if name == "NetSFX" then
         local picked = netSounds[math.random(1, #netSounds)]
         fileName = picked.file .. ".mp3"
@@ -120,14 +121,10 @@ local function handleSound(sound)
         fileName = "Kick" .. (((num - 1) % 3) + 1) .. ".mp3"
     end
 
-    -- 3. EXECUTION: Play the sound and lock the gate
     if fileName then
         soundDebounce = true
-        
-        -- Mute the original game sound
         sound.Volume = 0
         
-        -- Create and play your custom sound
         local custom = Instance.new("Sound")
         custom.Parent = sound.Parent
         pcall(function() 
@@ -136,12 +133,10 @@ local function handleSound(sound)
         custom.Volume = targetVol
         custom:Play()
         
-        -- Cleanup: Remove the custom object after it finishes playing
         custom.Ended:Connect(function()
             custom:Destroy()
         end)
 
-        -- Reset the gate after a short delay (0.15s is usually the sweet spot for this game)
         task.delay(0.15, function()
             soundDebounce = false
         end)
@@ -152,13 +147,11 @@ workspace.DescendantAdded:Connect(handleSound)
 ----------------------------------------
 -- Dribble Speed
 ----------------------------------------
-local dribbleEnabled = false
-
 extraSection:addToggle({
     text = 'Dribble Speed',
     default = false
 }, function(state)
-    dribbleEnabled = state
+    Toggles.DribbleSpeed = state
 end)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -177,7 +170,9 @@ local function clear(t)
 end
 
 local function set(v)
-    if runSpeedMult.Value ~= v then runSpeedMult.Value = v end
+    if Toggles.DribbleSpeed and runSpeedMult.Value ~= v then 
+        runSpeedMult.Value = v 
+    end
 end
 
 local function bind(h)
@@ -199,32 +194,10 @@ watch(temp:WaitForChild("Ball"))
 RunService.RenderStepped:Connect(function()
     local cam=workspace.CurrentCamera
     if cam and cam.FieldOfView>80 then cam.FieldOfView=80 end
-    end)
-
-----------------------------------------
--- Auto Top Bins (FIXED UI VISIBILITY)
-----------------------------------------
-_G.AutoBinsEnabled = false
-
--- We create the UI here but keep it DISABLED until the toggle is clicked
-local player = game:GetService("Players").LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-local binsGui = Instance.new("ScreenGui")
-binsGui.Name = "AutoBinsIndicator"
-binsGui.ResetOnSpawn = false
-binsGui.Enabled = false -- Start hidden
-binsGui.Parent = playerGui
-
-extraSection:addToggle({
-    text = 'Auto Top Bins',
-    default = false
-}, function(state)
-    _G.AutoBinsEnabled = state
-    binsGui.Enabled = state -- Only shows when enabled
 end)
 
 ----------------------------------------
--- Interpolation (NO TOGGLES)
+-- Interpolation Buttons
 ----------------------------------------
 extraSection:addButton({ text='15 Interpolation', style='large' }, function()
     pcall(function() setfflag("InterpolationMaxDelayMSec","15") end)
@@ -242,6 +215,9 @@ extraSection:addButton({ text='55 Interpolation', style='large' }, function()
     pcall(function() setfflag("InterpolationMaxDelayMSec","55") end)
 end)
 
+--------------------------------------------------
+-- MAIN SCRIPT SECTION
+--------------------------------------------------
 local section = menu:addSection({
     text = 'Script Executor',
     side = 'auto',
@@ -249,28 +225,80 @@ local section = menu:addSection({
 })
 
 --------------------------------------------------
--- UI TOGGLES (NO INTERPOLATION HERE)
+-- UI TOGGLES
 --------------------------------------------------
 section:addToggle({ text = 'Infinite M1 / M2 (Z)' }, function(v)
     Toggles.InfiniteM12 = v
 end)
 
+----------------------------------------
+-- INSTA SHOT WITH CHANGEABLE KEYBIND
+----------------------------------------
+local instaShotKeybindBtn = nil
+
 section:addToggle({ text = 'Insta Shot (G)' }, function(v)
     Toggles.InstaShot = v
 end)
 
-section:addToggle({ text = 'HBE (0 / H / M / N)' }, function(v)
+instaShotKeybindBtn = section:addButton({ 
+    text = 'Change Insta Shot Key', 
+    style = 'small' 
+}, function()
+    local UIS = game:GetService("UserInputService")
+    
+    -- Create temporary notification
+    print("Press any key to set as new Insta Shot keybind...")
+    
+    local conn
+    conn = UIS.InputBegan:Connect(function(input, gp)
+        if gp then return end
+        
+        Keybinds.InstaShot = input.KeyCode
+        print("Insta Shot keybind changed to: " .. tostring(input.KeyCode))
+        
+        conn:Disconnect()
+    end)
+end)
+
+section:addToggle({ text = 'HBE (P / Comma / Dot)' }, function(v)
     Toggles.HBE = v
 end)
+
+----------------------------------------
+-- INSTA FLICK WITH CHANGEABLE KEYBIND
+----------------------------------------
+local instaFlickKeybindBtn = nil
 
 section:addToggle({ text = 'Insta Flick (T)' }, function(v)
     Toggles.InstaFlick = v
 end)
 
-----------------------------------------
--- Infinite Stamina (PASTE HERE)
-----------------------------------------
+instaFlickKeybindBtn = section:addButton({ 
+    text = 'Change Insta Flick Key', 
+    style = 'small' 
+}, function()
+    local UIS = game:GetService("UserInputService")
+    
+    print("Press any key to set as new Insta Flick keybind...")
+    
+    local conn
+    conn = UIS.InputBegan:Connect(function(input, gp)
+        if gp then return end
+        
+        Keybinds.InstaFlick = input.KeyCode
+        print("Insta Flick keybind changed to: " .. tostring(input.KeyCode))
+        
+        conn:Disconnect()
+    end)
+end)
 
+section:addToggle({ text = 'Double Tap (P)' }, function(v)
+    Toggles.DoubleTap = v
+end)
+
+----------------------------------------
+-- Infinite Stamina
+----------------------------------------
 section:addToggle({
     text = 'Infinite Stamina',
     style = 'large'
@@ -278,28 +306,8 @@ section:addToggle({
     Toggles.InfiniteStamina = state
 end)
 
-Toggles.InfiniteStamina = false
-
-do
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local player = Players.LocalPlayer
-
-    local function getStats()
-        local container = workspace:WaitForChild("CharacterContainer")
-        local char = container:WaitForChild(player.Name)
-        local stats = char:WaitForChild("Stats")
-        return stats:WaitForChild("Stamina"), stats:WaitForChild("MaxStamina")
-    end
-
-    RunService.Heartbeat:Connect(function()
-        if not Toggles.InfiniteStamina then return end
-        local stamina, maxStamina = getStats()
-        stamina.Value = maxStamina.Value
-    end)
-end
 --------------------------------------------------
--- INFINITE M1 / M2 (ORIGINAL LOGIC, GATED)
+-- INFINITE M1 / M2 LOGIC
 --------------------------------------------------
 do
     local Players = game:GetService('Players')
@@ -372,7 +380,7 @@ do
 end
 
 --------------------------------------------------
--- INSTA SHOT (ORIGINAL, GATED)
+-- INSTA SHOT LOGIC (USES CHANGEABLE KEYBIND)
 --------------------------------------------------
 do
     local Players = game:GetService('Players')
@@ -398,7 +406,7 @@ do
 
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
-        if input.KeyCode ~= Enum.KeyCode.G then return end
+        if input.KeyCode ~= Keybinds.InstaShot then return end
         if not Toggles.InstaShot then return end
 
         local player = Players.LocalPlayer
@@ -424,7 +432,7 @@ do
 end
 
 --------------------------------------------------
--- HBE (FULL ORIGINAL SCRIPT, UI GATED)
+-- HBE LOGIC (UPDATED KEYBINDS: P, COMMA, DOT)
 --------------------------------------------------
 do
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -491,15 +499,19 @@ do
     UserInputService.InputBegan:Connect(function(input, processed)
         if processed or not Toggles.HBE then return end
 
-        if input.KeyCode == Enum.KeyCode.Zero then
+        if input.KeyCode == Enum.KeyCode.P then
             scriptActive = not scriptActive
+            print("HBE Active: " .. tostring(scriptActive))
         elseif input.KeyCode == Enum.KeyCode.H then
             showSphere = not showSphere
             if not showSphere and visualizer then visualizer.Visible = false end
-        elseif input.KeyCode == Enum.KeyCode.M then
+            print("HBE Sphere: " .. tostring(showSphere))
+        elseif input.KeyCode == Enum.KeyCode.Comma then
             manualSize = manualSize + 1
-        elseif input.KeyCode == Enum.KeyCode.N then
+            print("HBE Size: " .. manualSize)
+        elseif input.KeyCode == Enum.KeyCode.Period then
             manualSize = math.max(1, manualSize - 1)
+            print("HBE Size: " .. manualSize)
         end
     end)
 
@@ -508,7 +520,7 @@ do
 end
 
 --------------------------------------------------
--- INSTA FLICK (ORIGINAL, GATED)
+-- INSTA FLICK LOGIC (USES CHANGEABLE KEYBIND)
 --------------------------------------------------
 do
     local Players = game:GetService('Players')
@@ -527,7 +539,7 @@ do
 
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
-        if input.KeyCode ~= Enum.KeyCode.T then return end
+        if input.KeyCode ~= Keybinds.InstaFlick then return end
         if not Toggles.InstaFlick then return end
 
         local ballFolder = workspace:FindFirstChild('Temp')
@@ -557,8 +569,9 @@ do
         KickRemote:FireServer(table.unpack(args))
     end)
 end
+
 --------------------------------------------------
--- DOUBLE TAP (P) — FULL ORIGINAL, UI GATED
+-- DOUBLE TAP (P KEY)
 --------------------------------------------------
 do
     local Players = game:GetService('Players')
@@ -631,454 +644,39 @@ do
 end
 
 --------------------------------------------------
--- AUTO TOP BINS — FULL SCRIPT (UI FIXED)
---------------------------------------------------
-_G.AutoBinsEnabled = _G.AutoBinsEnabled or false
-
-do
-    local Players = game:GetService("Players")
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local Workspace = game:GetService("Workspace")
-    local RunService = game:GetService("RunService")
-    local UserInputService = game:GetService("UserInputService")
-
-    local player = Players.LocalPlayer
-    local playerGui = player:WaitForChild("PlayerGui")
-
-    local Knit = require(ReplicatedStorage.Packages.Knit)
-    task.spawn(function()
-        pcall(function()
-            Knit.OnStart():await()
-        end)
-    end)
-
-    local KeyHandlerService = Knit.GetService("KeyHandlerService")
-    local kickRemote = KeyHandlerService:GetKey("Kick")
-
-    -- SETTINGS
-    local FIRE_RANGE = 7
-    local COOLDOWN = 1
-
-    -- STATE
-    local topEnabled = false
-    local bottomEnabled = false
-    local lastFire = 0
-
-    -- UI INDICATOR (ALREADY CREATED IN TOP BINS SECTION ABOVE)
-    local gui = binsGui
-
-    local function mkLocal(y, text)
-        local l = Instance.new("TextLabel")
-        l.Parent = gui
-        l.Size = UDim2.new(0, 100, 0, 26)
-        l.Position = UDim2.new(1, -110, 0, y)
-        l.BackgroundTransparency = 0.5
-        l.BackgroundColor3 = Color3.new(0, 0, 0)
-        l.TextScaled = true
-        l.Font = Enum.Font.SourceSansBold
-        l.Text = text
-        return l
-    end
-
-    local topLbl = mkLocal(8, "TOP OFF")
-    local botLbl = mkLocal(40, "BOT OFF")
-
-    local function update()
-        topLbl.Text = topEnabled and "TOP ON" or "TOP OFF"
-        topLbl.TextColor3 = topEnabled and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,0,0)
-
-        botLbl.Text = bottomEnabled and "BOT ON" or "BOT OFF"
-        botLbl.TextColor3 = bottomEnabled and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,0,0)
-    end
-    update()
-
-    -- HELPERS
-    local function getBall()
-        local temp = Workspace:FindFirstChild("Temp")
-        return temp and temp:FindFirstChild("Ball")
-    end
-
-    local function getField()
-        for _, v in ipairs(Workspace:GetDescendants()) do
-            if v.Name == "Field" and v:FindFirstChild("GoalboxHome") then
-                return v
-            end
-        end
-    end
-
-    local function getTarget(parts)
-        local cam = Workspace.CurrentCamera
-        local best, bestScore
-
-        for _, p in ipairs(parts) do
-            if p and p:IsA("BasePart") then
-                local dir = (p.Position - cam.CFrame.Position).Unit
-                local score = cam.CFrame.LookVector:Dot(dir)
-                if not bestScore or score > bestScore then
-                    bestScore = score
-                    best = p
-                end
-            end
-        end
-        return best
-    end
-
-    local function getTopTarget()
-        local f = getField()
-        if not f then return end
-        return getTarget({
-            f.GoalboxHome:FindFirstChild("TOP RIGHT"),
-            f.GoalboxHome:FindFirstChild("TOP LEFT"),
-            f.GoalboxAway:FindFirstChild("TOP RIGHT"),
-            f.GoalboxAway:FindFirstChild("TOP LEFT")
-        })
-    end
-
-    local function getBottomTarget()
-        local f = getField()
-        if not f then return end
-        return getTarget({
-            f.GoalboxHome:FindFirstChild("BOTTOM RIGHT"),
-            f.GoalboxHome:FindFirstChild("BOTTOM LEFT"),
-            f.GoalboxAway:FindFirstChild("BOTTOM RIGHT"),
-            f.GoalboxAway:FindFirstChild("BOTTOM LEFT")
-        })
-    end
-
-    -- FIRE LOGIC
-    local function fire(getTargetFunc)
-        if not _G.AutoBinsEnabled then return end
-        if tick() - lastFire < COOLDOWN then return end
-        lastFire = tick()
-
-        local ball = getBall()
-        local char = player.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if not ball or not hrp or not hum then return end
-
-        local target = getTargetFunc()
-        if not target then return end
-
-        -- FORCE CAMERA AIM
-        local cam = Workspace.CurrentCamera
-        cam.CFrame = CFrame.new(cam.CFrame.Position, target.Position)
-
-        -- ALIGN CHARACTER
-        hrp.CFrame = CFrame.new(
-            hrp.Position,
-            Vector3.new(target.Position.X, hrp.Position.Y, target.Position.Z)
-        )
-
-        -- PLAY KICK ANIMATION
-        local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
-        local anim = Instance.new("Animation")
-        anim.AnimationId = "rbxassetid://118838549576967"
-        animator:LoadAnimation(anim):Play()
-
-        local dir = (target.Position - hrp.Position).Unit
-        local side = hrp.CFrame.RightVector:Dot(ball.Position - hrp.Position) > 0 and "Right" or "Left"
-
-        kickRemote:FireServer(
-            dir * 200,
-            ball,
-            false,
-            true,
-            140,
-            side,
-            hrp.CFrame,
-            { Enum.KeyCode.One },
-            false,
-            false
-        )
-
-        hum:ChangeState(Enum.HumanoidStateType.Jumping)
-    end
-
-    -- RENDER LOOP
-    RunService.RenderStepped:Connect(function()
-        if not _G.AutoBinsEnabled then return end
-
-        local ball = getBall()
-        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-        if not ball or not hrp then return end
-        if (ball.Position - hrp.Position).Magnitude > FIRE_RANGE then return end
-
-        if topEnabled then
-            fire(getTopTarget)
-        elseif bottomEnabled then
-            fire(getBottomTarget)
-        end
-    end)
-
-    -- KEYBINDS
-    UserInputService.InputBegan:Connect(function(input, gp)
-        if gp or not _G.AutoBinsEnabled then return end
-
-        if input.KeyCode == Enum.KeyCode.One then
-            topEnabled = not topEnabled
-            bottomEnabled = false
-            update()
-        elseif input.KeyCode == Enum.KeyCode.Two then
-            bottomEnabled = not bottomEnabled
-            topEnabled = false
-            update()
-        end
-    end)
-end
-
-
-
---------------------------------------------------
--- DRIBBLE SPEED — FULL ORIGINAL, UI GATED
---------------------------------------------------
-do
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local Workspace = game:GetService("Workspace")
-
-    local runSpeedMult = ReplicatedStorage.PSSettings.RunSpeedMult
-    local temp = Workspace.Temp
-
-    local function set(v)
-        if Toggles.DribbleSpeed then runSpeedMult.Value = v end
-    end
-
-    local function watch(ball)
-        ball.ChildAdded:Connect(function(c)
-            if c.Name=="PossessionHighlight" then set(1.15) end
-        end)
-        ball.ChildRemoved:Connect(function(c)
-            if c.Name=="PossessionHighlight" then set(1) end
-        end)
-    end
-
-    task.spawn(function()
-        while true do
-            local b=temp:WaitForChild("Ball")
-            watch(b)
-            b.AncestryChanged:Wait()
-            set(1)
-        end
-    end)
-end
-
---------------------------------------------------
--- INFINITE STAMINA — FULL ORIGINAL, UI GATED
+-- INFINITE STAMINA LOGIC
 --------------------------------------------------
 do
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
     local player = Players.LocalPlayer
+
+    local function getStats()
+        local container = workspace:WaitForChild("CharacterContainer")
+        local char = container:WaitForChild(player.Name)
+        local stats = char:WaitForChild("Stats")
+        return stats:WaitForChild("Stamina"), stats:WaitForChild("MaxStamina")
+    end
 
     RunService.Heartbeat:Connect(function()
         if not Toggles.InfiniteStamina then return end
-        local stats = workspace.CharacterContainer[player.Name].Stats
-        stats.Stamina.Value = stats.MaxStamina.Value
-    end)
-end
---------------------------------------------------
--- INTERPOLATION (BUTTONS ONLY — NO TOGGLES)
---------------------------------------------------
-do
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-    local interpModule = require(ReplicatedStorage.Modules.InterpolationHandler)
-
-    local interpSection = menu:addSection({
-        text = "Interpolation",
-        side = "auto",
-        showMinButton = false
-    })
-
-    interpSection:addButton({ text = "Interpolation: Legit" }, function()
-        interpModule.SetInterpolation(0.08)
-    end)
-
-    interpSection:addButton({ text = "Interpolation: Semi" }, function()
-        interpModule.SetInterpolation(0.03)
-    end)
-
-    interpSection:addButton({ text = "Interpolation: Aggressive" }, function()
-        interpModule.SetInterpolation(0)
+        pcall(function()
+            local stamina, maxStamina = getStats()
+            stamina.Value = maxStamina.Value
+        end)
     end)
 end
 
 --------------------------------------------------
--- UI INDICATOR SYNC (ON / OFF VISUAL SAFETY)
+-- FINAL SAFETY
 --------------------------------------------------
-do
-    -- This ensures toggles never desync visually
-    for name, _ in pairs(Toggles) do
-        Toggles[name] = Toggles[name] or false
-    end
+if getgenv().RoffaHubLoaded then
+    warn("RoffaHub already loaded")
+    return
 end
+getgenv().RoffaHubLoaded = true
 
---------------------------------------------------
--- FINAL SAFETY WRAP
---------------------------------------------------
-do
-    -- Prevent duplicate execution if script is re-run
-    if getgenv().HakaiseHubLoaded then
-        warn("HakaiseHub already loaded")
-        return
-    end
-    getgenv().HakaiseHubLoaded = true
-end
-------------------------------------------------
--- RESTORED FEATURES (PART 4)
-------------------------------------------------
-
-----------------------------------------
--- Custom Sounds
-----------------------------------------
-section:addButton({
-    text = 'Custom Sounds',
-    style = 'large'
-}, function()
-    -- FIXED: Instead of loadstring, it toggles the built-in system
-    customSoundsEnabled = not customSoundsEnabled
-    print("Custom Sounds: "..tostring(customSoundsEnabled))
-end)
-
-----------------------------------------
--- Dribble Speed
-----------------------------------------
-section:addButton({
-    text = 'Dribble Speed',
-    style = 'large'
-}, function()
-    loadstring([[ 
--- Dribble Speed (Full Working Version)
-
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-
-local PSSettings = ReplicatedStorage:WaitForChild("PSSettings")
-local runSpeedMult = PSSettings:WaitForChild("RunSpeedMult")
-local temp = Workspace:WaitForChild("Temp")
-
-local connections = {}
-local ballConnections = {}
-
-local function clear(tbl)
-    for _, c in ipairs(tbl) do
-        pcall(function() c:Disconnect() end)
-    end
-    table.clear(tbl)
-end
-
-local function setSpeed(v)
-    if runSpeedMult.Value ~= v then
-        runSpeedMult.Value = v
-    end
-end
-
-local function bindHighlight(inst)
-    clear(connections)
-    setSpeed(inst.Enabled and 1.15 or 1)
-
-    table.insert(connections, inst:GetPropertyChangedSignal("Enabled"):Connect(function()
-        setSpeed(inst.Enabled and 1.15 or 1)
-    end))
-
-    table.insert(connections, inst.AncestryChanged:Connect(function(_, p)
-        if not p then
-            clear(connections)
-            setSpeed(1)
-        end
-    end))
-end
-
-local function watchBall(ball)
-    clear(ballConnections)
-    clear(connections)
-
-    table.insert(ballConnections, ball.ChildAdded:Connect(function(c)
-        if c.Name == "PossessionHighlight" then
-            bindHighlight(c)
-        end
-    end))
-
-    table.insert(ballConnections, ball.ChildRemoved:Connect(function(c)
-        if c.Name == "PossessionHighlight" then
-            clear(connections)
-            setSpeed(1)
-        end
-    end))
-
-    local h = ball:FindFirstChild("PossessionHighlight")
-    if h then bindHighlight(h) else setSpeed(1) end
-
-    table.insert(ballConnections, ball.AncestryChanged:Connect(function(_, p)
-        if not p then
-            clear(ballConnections)
-            clear(connections)
-            setSpeed(1)
-            watchBall(temp:WaitForChild("Ball"))
-        end
-    end))
-end
-
-watchBall(temp:WaitForChild("Ball"))
-
-RunService.RenderStepped:Connect(function()
-    local cam = workspace.CurrentCamera
-    if cam and cam.FieldOfView > 80 then
-        cam.FieldOfView = 80
-    end
-end)
-]])()
-end)
-
-
-----------------------------------------
--- Auto Top Bins (UI ENABLED + KEYBINDS)
-----------------------------------------
-section:addButton({
-    text = 'Auto Top Bins',
-    style = 'large'
-}, function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/your-autobins-source-here.lua"))()
-end)
-
-----------------------------------------
--- Interpolation (NO TOGGLES)
-----------------------------------------
-section:addButton({
-    text = '15 Interpolation',
-    style = 'large'
-}, function()
-    pcall(function() setfflag("InterpolationMaxDelayMSec", "15") end)
-end)
-
-section:addButton({
-    text = '25 Interpolation',
-    style = 'large'
-}, function()
-    pcall(function() setfflag("InterpolationMaxDelayMSec", "25") end)
-end)
-
-section:addButton({
-    text = '45 Interpolation',
-    style = 'large'
-}, function()
-    pcall(function() setfflag("InterpolationMaxDelayMSec", "45") end)
-end)
-
-section:addButton({
-    text = '55 Interpolation',
-    style = 'large'
-}, function()
-    pcall(function() setfflag("InterpolationMaxDelayMSec", "55") end)
-end)
--- RE-OPEN MAIN SECTION (REQUIRED)
-local window = ui.windows[1]
-local menu = window.menus[1]
-
-local section = menu:addSection({
-    text = 'Script Executor (Extra)',
-    side = 'auto',
-    showMinButton = false
-})
+print("RoffaHub loaded successfully!")
+print("Insta Shot keybind: " .. tostring(Keybinds.InstaShot))
+print("Insta Flick keybind: " .. tostring(Keybinds.InstaFlick))
+print("HBE keybinds: P (toggle), Comma (bigger), Dot (smaller)")
