@@ -223,6 +223,75 @@ local section = menu:addSection({
 })
 
 --------------------------------------------------
+-- NOTIFICATION SYSTEM FOR KEYBIND CHANGES
+--------------------------------------------------
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local function createNotification(text, duration)
+    duration = duration or 3
+    
+    -- Create notification GUI
+    local notifGui = Instance.new("ScreenGui")
+    notifGui.Name = "KeybindNotification"
+    notifGui.ResetOnSpawn = false
+    notifGui.Parent = playerGui
+    
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 300, 0, 60)
+    frame.Position = UDim2.new(0.5, -150, 0.1, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    frame.BorderSizePixel = 0
+    frame.Parent = notifGui
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -20, 1, -20)
+    label.Position = UDim2.new(0, 10, 0, 10)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextScaled = true
+    label.Font = Enum.Font.GothamBold
+    label.Parent = frame
+    
+    -- Fade in
+    frame.BackgroundTransparency = 1
+    label.TextTransparency = 1
+    
+    local tweenService = game:GetService("TweenService")
+    local fadeIn = tweenService:Create(frame, TweenInfo.new(0.3), {BackgroundTransparency = 0.1})
+    local fadeInText = tweenService:Create(label, TweenInfo.new(0.3), {TextTransparency = 0})
+    
+    fadeIn:Play()
+    fadeInText:Play()
+    
+    -- Wait and fade out
+    task.wait(duration)
+    
+    local fadeOut = tweenService:Create(frame, TweenInfo.new(0.3), {BackgroundTransparency = 1})
+    local fadeOutText = tweenService:Create(label, TweenInfo.new(0.3), {TextTransparency = 1})
+    
+    fadeOut:Play()
+    fadeOutText:Play()
+    
+    fadeOut.Completed:Connect(function()
+        notifGui:Destroy()
+    end)
+end
+
+--------------------------------------------------
+-- REFERENCES TO UI ELEMENTS (FOR UPDATING TEXT)
+--------------------------------------------------
+local instaShotToggle = nil
+local instaFlickToggle = nil
+local doubleTapToggle = nil
+
+--------------------------------------------------
 -- UI TOGGLES WITH VISIBLE KEYBINDS
 --------------------------------------------------
 section:addToggle({ text = 'Infinite M1 / M2 (Z)' }, function(v)
@@ -232,8 +301,8 @@ end)
 ----------------------------------------
 -- INSTA SHOT WITH CHANGEABLE KEYBIND
 ----------------------------------------
-local instaShotLabel = section:addToggle({ 
-    text = 'Insta Shot [' .. Keybinds.InstaShot.Name .. ']' 
+instaShotToggle = section:addToggle({ 
+    text = 'Insta Shot [G]' 
 }, function(v)
     Toggles.InstaShot = v
 end)
@@ -244,21 +313,23 @@ section:addButton({
 }, function()
     local UIS = game:GetService("UserInputService")
     
+    createNotification("Press any key for Insta Shot...", 10)
+    
     local conn
     conn = UIS.InputBegan:Connect(function(input, gp)
         if gp then return end
         
         Keybinds.InstaShot = input.KeyCode
         
-        -- Update the toggle text to show new keybind
-        for _, toggle in pairs(section.toggles) do
-            if toggle.text:match("Insta Shot") then
-                toggle.text = 'Insta Shot [' .. input.KeyCode.Name .. ']'
-                toggle.label.Text = toggle.text
-                break
+        -- Update UI text
+        if instaShotToggle and instaShotToggle.text then
+            instaShotToggle.text = 'Insta Shot [' .. input.KeyCode.Name .. ']'
+            if instaShotToggle.label then
+                instaShotToggle.label.Text = instaShotToggle.text
             end
         end
         
+        createNotification("Insta Shot: " .. input.KeyCode.Name, 2)
         conn:Disconnect()
     end)
 end)
@@ -267,7 +338,7 @@ end)
 -- HBE (UI Toggle controls HBE, P controls visual sphere)
 ----------------------------------------
 section:addToggle({ 
-    text = 'HBE (Comma/Dot = Size)' 
+    text = 'HBE (Comma/Dot = Size, P = Visual)' 
 }, function(v)
     Toggles.HBE = v
 end)
@@ -275,8 +346,8 @@ end)
 ----------------------------------------
 -- INSTA FLICK WITH CHANGEABLE KEYBIND
 ----------------------------------------
-section:addToggle({ 
-    text = 'Insta Flick [' .. Keybinds.InstaFlick.Name .. ']' 
+instaFlickToggle = section:addToggle({ 
+    text = 'Insta Flick [T]' 
 }, function(v)
     Toggles.InstaFlick = v
 end)
@@ -287,21 +358,23 @@ section:addButton({
 }, function()
     local UIS = game:GetService("UserInputService")
     
+    createNotification("Press any key for Insta Flick...", 10)
+    
     local conn
     conn = UIS.InputBegan:Connect(function(input, gp)
         if gp then return end
         
         Keybinds.InstaFlick = input.KeyCode
         
-        -- Update the toggle text to show new keybind
-        for _, toggle in pairs(section.toggles) do
-            if toggle.text:match("Insta Flick") then
-                toggle.text = 'Insta Flick [' .. input.KeyCode.Name .. ']'
-                toggle.label.Text = toggle.text
-                break
+        -- Update UI text
+        if instaFlickToggle and instaFlickToggle.text then
+            instaFlickToggle.text = 'Insta Flick [' .. input.KeyCode.Name .. ']'
+            if instaFlickToggle.label then
+                instaFlickToggle.label.Text = instaFlickToggle.text
             end
         end
         
+        createNotification("Insta Flick: " .. input.KeyCode.Name, 2)
         conn:Disconnect()
     end)
 end)
@@ -309,8 +382,8 @@ end)
 ----------------------------------------
 -- DOUBLE TAP WITH CHANGEABLE KEYBIND
 ----------------------------------------
-section:addToggle({ 
-    text = 'Double Tap [' .. Keybinds.DoubleTap.Name .. ']' 
+doubleTapToggle = section:addToggle({ 
+    text = 'Double Tap [P]' 
 }, function(v)
     Toggles.DoubleTap = v
 end)
@@ -321,21 +394,23 @@ section:addButton({
 }, function()
     local UIS = game:GetService("UserInputService")
     
+    createNotification("Press any key for Double Tap...", 10)
+    
     local conn
     conn = UIS.InputBegan:Connect(function(input, gp)
         if gp then return end
         
         Keybinds.DoubleTap = input.KeyCode
         
-        -- Update the toggle text to show new keybind
-        for _, toggle in pairs(section.toggles) do
-            if toggle.text:match("Double Tap") then
-                toggle.text = 'Double Tap [' .. input.KeyCode.Name .. ']'
-                toggle.label.Text = toggle.text
-                break
+        -- Update UI text
+        if doubleTapToggle and doubleTapToggle.text then
+            doubleTapToggle.text = 'Double Tap [' .. input.KeyCode.Name .. ']'
+            if doubleTapToggle.label then
+                doubleTapToggle.label.Text = doubleTapToggle.text
             end
         end
         
+        createNotification("Double Tap: " .. input.KeyCode.Name, 2)
         conn:Disconnect()
     end)
 end)
@@ -437,6 +512,8 @@ do
     local kickRemote = KeyHandlerService:GetKey('Kick')
 
     local animationId = 'rbxassetid://139333593369314'
+    local lastActivation = 0
+    local cooldown = 0.5
 
     local function playAnimation(character)
         local humanoid = character:FindFirstChildOfClass('Humanoid')
@@ -452,6 +529,11 @@ do
         if gameProcessed then return end
         if input.KeyCode ~= Keybinds.InstaShot then return end
         if not Toggles.InstaShot then return end
+        
+        -- Cooldown check to prevent spam
+        local currentTime = tick()
+        if currentTime - lastActivation < cooldown then return end
+        lastActivation = currentTime
 
         local player = Players.LocalPlayer
         local character = player.Character or player.CharacterAdded:Wait()
@@ -575,11 +657,19 @@ do
 
     local animation = Instance.new('Animation')
     animation.AnimationId = 'rbxassetid://15134077897'
+    
+    local lastActivation = 0
+    local cooldown = 0.5
 
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
         if input.KeyCode ~= Keybinds.InstaFlick then return end
         if not Toggles.InstaFlick then return end
+        
+        -- Cooldown check to prevent spam
+        local currentTime = tick()
+        if currentTime - lastActivation < cooldown then return end
+        lastActivation = currentTime
 
         local ballFolder = workspace:FindFirstChild('Temp')
         if not ballFolder then return end
@@ -633,6 +723,9 @@ do
     local DTAP_FORCE = 27.13375797914341
     local DTAP_VECTOR = Vector3.new(14.2802124, 21.8535023, 32.024025)
     local DTAP_ANIM_ID = 'rbxassetid://16859143160'
+    
+    local lastActivation = 0
+    local cooldown = 1.5
 
     local function getBall()
         local folder = workspace:FindFirstChild('Temp')
@@ -660,6 +753,11 @@ do
     UserInputService.InputBegan:Connect(function(i,gp)
         if gp or i.KeyCode ~= Keybinds.DoubleTap then return end
         if not Toggles.DoubleTap then return end
+        
+        -- Cooldown check to prevent spam
+        local currentTime = tick()
+        if currentTime - lastActivation < cooldown then return end
+        lastActivation = currentTime
 
         local ball = getBall()
         if not ball then return end
