@@ -45,6 +45,7 @@ local Toggles = {
 
 -- Changeable keybinds
 local Keybinds = {
+    InfiniteM12 = Enum.KeyCode.Z,
     InstaShot = Enum.KeyCode.G,
     InstaFlick = Enum.KeyCode.T,
     DoubleTap = Enum.KeyCode.P
@@ -287,6 +288,7 @@ end
 --------------------------------------------------
 -- REFERENCES TO UI ELEMENTS (FOR UPDATING TEXT)
 --------------------------------------------------
+local infiniteM12Toggle = nil
 local instaShotToggle = nil
 local instaFlickToggle = nil
 local doubleTapToggle = nil
@@ -294,8 +296,37 @@ local doubleTapToggle = nil
 --------------------------------------------------
 -- UI TOGGLES WITH VISIBLE KEYBINDS
 --------------------------------------------------
-section:addToggle({ text = 'Infinite M1 / M2 (Z)' }, function(v)
+infiniteM12Toggle = section:addToggle({ 
+    text = 'Infinite M1 / M2 [Z]' 
+}, function(v)
     Toggles.InfiniteM12 = v
+end)
+
+section:addButton({ 
+    text = 'Change M1/M2 Key', 
+    style = 'small' 
+}, function()
+    local UIS = game:GetService("UserInputService")
+    
+    local conn
+    conn = UIS.InputBegan:Connect(function(input, gp)
+        if gp then return end
+        
+        -- Immediately disconnect after first key press
+        conn:Disconnect()
+        
+        Keybinds.InfiniteM12 = input.KeyCode
+        
+        -- Update UI text
+        if infiniteM12Toggle and infiniteM12Toggle.text then
+            infiniteM12Toggle.text = 'Infinite M1 / M2 [' .. input.KeyCode.Name .. ']'
+            if infiniteM12Toggle.label then
+                infiniteM12Toggle.label.Text = infiniteM12Toggle.text
+            end
+        end
+        
+        createNotification("M1/M2 Key: " .. input.KeyCode.Name, 2)
+    end)
 end)
 
 ----------------------------------------
@@ -313,11 +344,12 @@ section:addButton({
 }, function()
     local UIS = game:GetService("UserInputService")
     
-    createNotification("Press any key for Insta Shot...", 10)
-    
     local conn
     conn = UIS.InputBegan:Connect(function(input, gp)
         if gp then return end
+        
+        -- Immediately disconnect after first key press
+        conn:Disconnect()
         
         Keybinds.InstaShot = input.KeyCode
         
@@ -330,7 +362,6 @@ section:addButton({
         end
         
         createNotification("Insta Shot: " .. input.KeyCode.Name, 2)
-        conn:Disconnect()
     end)
 end)
 
@@ -358,11 +389,12 @@ section:addButton({
 }, function()
     local UIS = game:GetService("UserInputService")
     
-    createNotification("Press any key for Insta Flick...", 10)
-    
     local conn
     conn = UIS.InputBegan:Connect(function(input, gp)
         if gp then return end
+        
+        -- Immediately disconnect after first key press
+        conn:Disconnect()
         
         Keybinds.InstaFlick = input.KeyCode
         
@@ -375,7 +407,6 @@ section:addButton({
         end
         
         createNotification("Insta Flick: " .. input.KeyCode.Name, 2)
-        conn:Disconnect()
     end)
 end)
 
@@ -394,11 +425,12 @@ section:addButton({
 }, function()
     local UIS = game:GetService("UserInputService")
     
-    createNotification("Press any key for Double Tap...", 10)
-    
     local conn
     conn = UIS.InputBegan:Connect(function(input, gp)
         if gp then return end
+        
+        -- Immediately disconnect after first key press
+        conn:Disconnect()
         
         Keybinds.DoubleTap = input.KeyCode
         
@@ -411,7 +443,6 @@ section:addButton({
         end
         
         createNotification("Double Tap: " .. input.KeyCode.Name, 2)
-        conn:Disconnect()
     end)
 end)
 
@@ -446,13 +477,13 @@ do
     local holdingZ = false
 
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if not gameProcessed and input.KeyCode == Enum.KeyCode.Z then
+        if not gameProcessed and input.KeyCode == Keybinds.InfiniteM12 then
             holdingZ = true
         end
     end)
 
     UserInputService.InputEnded:Connect(function(input)
-        if input.KeyCode == Enum.KeyCode.Z then
+        if input.KeyCode == Keybinds.InfiniteM12 then
             holdingZ = false
         end
     end)
