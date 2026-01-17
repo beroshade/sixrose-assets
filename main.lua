@@ -573,7 +573,7 @@ do
         if not root or not humanoid then return end
 
         local camera = Workspace.CurrentCamera
-        local direction = camera.CFrame.LookVector * 200
+        local direction = camera.CFrame.LookVector * 120
         local ballFolder = Workspace:FindFirstChild('Temp')
         local ball = ballFolder and ballFolder:FindFirstChild('Ball')
         if not ball then return end
